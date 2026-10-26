@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kho Âm Thanh PXDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+*{box-sizing:border-box}body{margin:0}
+
+/* Layout: mixing-console list — filter rail on top, one strip per sound, four takes side by side */
+:root{
+  --bg:#f3f2ef; --panel:#ffffff; --panel2:#ebe9e4; --line:#d9d6cf;
+  --fg:#1d1c1a; --muted:#6c6860; --accent:#d9481c; --accent-soft:#f6ddd2;
+  --wave:#b9b4aa; --wave-on:#1d1c1a; --ok:#2f7d4f; --ok-soft:#dcefe2;
+  --display:"Be Vietnam Pro",system-ui,sans-serif; --body:"Be Vietnam Pro",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#151413; --panel:#1e1d1b; --panel2:#272522; --line:#36332f;
+  --fg:#efede8; --muted:#a29d93; --accent:#ff7347; --accent-soft:#3d2219;
+  --wave:#4f4b45; --wave-on:#efede8; --ok:#6cc58f; --ok-soft:#1d3426; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151413; --panel:#1e1d1b; --panel2:#272522; --line:#36332f;
+  --fg:#efede8; --muted:#a29d93; --accent:#ff7347; --accent-soft:#3d2219;
+  --wave:#4f4b45; --wave-on:#efede8; --ok:#6cc58f; --ok-soft:#1d3426; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,4.4vw,42px);letter-spacing:-.02em;line-height:1;margin:0;text-wrap:balance}
+h1 .rec{display:inline-block;width:.32em;height:.32em;border-radius:50%;background:var(--accent);vertical-align:.38em;margin-right:.25em}
+.sub{color:var(--muted);margin:8px 0 0;max-width:62ch}
+.stats{display:flex;gap:20px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.stats b{display:block;font-family:var(--display);font-size:22px;color:var(--fg);font-weight:700}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);min-width:72px}
+.chip{font:500 13px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#q{font:14px var(--body);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;flex:1;min-width:0;max-width:340px}
+@media (max-width:700px){.bar{position:static}}
+.list{display:flex;flex-direction:column;gap:14px}
+.strip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;justify-content:space-between}
+.title{font-family:var(--display);font-weight:700;font-size:18px;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font:500 11px var(--mono);letter-spacing:.04em;padding:3px 8px;border-radius:5px;background:var(--panel2);color:var(--muted)}
+.tag.src-ff{background:var(--accent-soft);color:var(--accent)}
+.prompt{font:12px/1.5 var(--mono);color:var(--muted);margin:0;overflow-wrap:anywhere}
+.takes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:860px){.takes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:440px){.takes{grid-template-columns:1fr}}
+.take{border:1px solid var(--line);border-radius:9px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg);min-width:0}
+.take.used{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.tk-top{display:flex;align-items:center;gap:8px}
+.play{width:34px;height:34px;flex:none;border-radius:50%;border:none;background:var(--fg);color:var(--bg);cursor:pointer;display:grid;place-items:center}
+.play svg{width:14px;height:14px;fill:currentColor}
+.take.playing .play{background:var(--accent);color:#fff}
+.tk-name{font:600 13px var(--body)}
+.tk-dur{font:12px var(--mono);color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+canvas{width:100%;height:44px;display:block;cursor:pointer}
+.tk-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.used-b{font:600 11px var(--body);color:var(--ok);background:var(--ok-soft);padding:2px 7px;border-radius:5px}
+a.act{text-decoration:none}
+.act{font:500 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;padding:4px 9px;cursor:pointer}
+.act.liked{border-color:var(--accent);color:var(--accent)}
+.act[disabled]{opacity:.45;cursor:not-allowed}
+.act-row{margin-left:auto;display:flex;gap:6px}
+.dl-all{font:600 12px var(--body);background:none;border:none;color:var(--accent);cursor:pointer;padding:0}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.note{font-size:12px;color:var(--muted);margin-top:26px;max-width:70ch}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="rec" aria-hidden="true"></span>Kho Âm Thanh PXDE</h1>
+      <p class="sub">Hiệu ứng âm thanh cho logo animation. Mỗi âm có 4 bản để nghe so sánh; bản viền xanh là bản đang dùng trong video test.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="bar">
+    <div class="row"><span class="lbl">Loại</span><div class="row" id="f-cat"></div></div>
+    <div class="row"><span class="lbl">Vibe</span><div class="row" id="f-mood"></div><span class="lbl" style="margin-left:12px">Nguồn</span><div class="row" id="f-src"></div></div>
+    <div class="row"><span class="lbl">Dự án</span><div class="row" id="f-proj"></div><input id="q" type="search" placeholder="Tìm theo tên hoặc prompt…" aria-label="Tìm âm thanh"></div>
+  </div>
+
+  <div class="list" id="list"><div class="empty">Đang tải kho âm thanh…</div></div>
+  <p class="note">File tải về là WAV 48kHz. Hiệu ứng tạo bằng ElevenLabs và Adobe Firefly cho các dự án logo animation của PIXELDESIGN.</p>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const CATS={whoosh:'Whoosh',impact:'Va chạm',bounce:'Nảy',pop:'Pop',ui:'Cơ khí / UI',riser:'Gồng lực',spark:'Tia lửa',shimmer:'Lấp lánh',engine:'Động cơ',roll:'Lăn'};
+const MOODS={manh:'Mạnh, công nghiệp',nhe:'Nhẹ, sang trọng'};
+let DATA=[]; const F={cat:'all',mood:'all',src:'all',proj:'all',q:''};
+const $=s=>document.querySelector(s);
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2200)};
+
+function chips(el,key,opts){
+  el.innerHTML='';
+  [['all','Tất cả'],...opts].forEach(([v,l])=>{const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',F[key]===v);b.onclick=()=>{F[key]=v;chips(el,key,opts);render()};el.appendChild(b)});
+}
+function stats(){
+  const n=DATA.reduce((a,g)=>a+g.vars.length,0);
+  $('#stats').innerHTML=`<div><b>${DATA.length}</b>âm</div><div><b>${n}</b>file</div><div><b>${new Set(DATA.map(g=>g.proj)).size}</b>dự án</div>`;
+}
+function match(g){
+  if(F.cat!=='all'&&g.cat!==F.cat)return false;
+  if(F.mood!=='all'&&g.mood!==F.mood)return false;
+  if(F.src!=='all'&&g.src!==F.src)return false;
+  if(F.proj!=='all'&&g.proj!==F.proj)return false;
+  if(F.q){const q=F.q.toLowerCase();if(!(g.name.toLowerCase().includes(q)||g.prompt.toLowerCase().includes(q)))return false}
+  return true;
+}
+const PLAY='<svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z"/></svg>', PAUSE='<svg viewBox="0 0 14 14"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z"/></svg>';
+function render(){
+  const list=$('#list'); list.innerHTML='';
+  const gs=DATA.filter(match);
+  if(!gs.length){list.innerHTML='<div class="empty">Không có âm nào khớp bộ lọc.</div>';return}
+  gs.forEach(g=>{
+    const s=document.createElement('section'); s.className='strip';
+    s.innerHTML=`<div class="head"><h2 class="title"></h2><div class="meta"><span class="tag">${CATS[g.cat]||g.cat}</span><span class="tag">${MOODS[g.mood]}</span><span class="tag ${g.src==='Adobe Firefly'?'src-ff':''}">${g.src}</span><span class="tag">${g.proj}</span></div></div>
+      <p class="prompt"></p><div class="takes"></div>`;
+    s.querySelector('.title').textContent=g.name; s.querySelector('.prompt').textContent='Prompt: '+g.prompt;
+    const tk=s.querySelector('.takes');
+    g.vars.forEach(v=>{
+      const id=v.file, d=document.createElement('div'); d.className='take'+(v.used?' used':''); d.dataset.file=id;
+      d.innerHTML=`<div class="tk-top"><button class="play" aria-label="Phát bản ${v.k}">${PLAY}</button><span class="tk-name">Bản ${v.k}</span><span class="tk-dur">${v.dur.toFixed(2)}s</span></div>
+        <canvas width="300" height="44" aria-hidden="true"></canvas>
+        <div class="tk-foot">${v.used?'<span class="used-b">Đang dùng</span>':''}<div class="act-row"><a class="act dl" href="sfx/${v.file}" download>Tải WAV</a></div></div>`;
+      const cv=d.querySelector('canvas'); v._cv=cv; drawWave(v,0);
+      d.querySelector('.play').onclick=()=>toggle(v,d);
+      cv.onclick=e=>{const r=cv.getBoundingClientRect();toggle(v,d,(e.clientX-r.left)/r.width)};
+
+      tk.appendChild(d);
+    });
+    list.appendChild(s);
+  });
+}
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function drawWave(v,prog){
+  const cv=v._cv; if(!cv)return; const dpr=window.devicePixelRatio||1; const w=cv.clientWidth||300,h=44;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=h*dpr}
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+  const n=v.peaks.length, bw=w/n, a=css('--wave'), b=css('--wave-on');
+  v.peaks.forEach((p,i)=>{const bh=Math.max(2,p*(h-6));c.fillStyle=(i/n<prog)?b:a;c.fillRect(i*bw+0.5,(h-bh)/2,Math.max(1,bw-1.5),bh)});
+}
+// player
+const audio=new Audio(); let cur=null, curEl=null, raf=0;
+function toggle(v,el,seek){
+  if(cur===v&&!audio.paused&&seek==null){audio.pause();return}
+  if(cur!==v){stop();cur=v;curEl=el;audio.src='sfx/'+v.file}
+  if(seek!=null&&audio.duration)audio.currentTime=seek*audio.duration;
+  audio.play().then(()=>{el.classList.add('playing');el.querySelector('.play').innerHTML=PAUSE;tick()}).catch(()=>toast('Không phát được file này.'));
+}
+function stop(){if(curEl){curEl.classList.remove('playing');curEl.querySelector('.play').innerHTML=PLAY;drawWave(cur,0)}cancelAnimationFrame(raf)}
+audio.onpause=()=>{if(curEl){curEl.classList.remove('playing');curEl.querySelector('.play').innerHTML=PLAY}cancelAnimationFrame(raf)};
+audio.onended=()=>{if(cur)drawWave(cur,0)};
+function tick(){if(cur&&audio.duration){drawWave(cur,audio.currentTime/audio.duration)}raf=requestAnimationFrame(tick)}
+// boot
+fetch('data.json').then(r=>r.json()).then(d=>{
+  DATA=d; stats();
+  chips($('#f-cat'),'cat',Object.entries(CATS).filter(([k])=>DATA.some(g=>g.cat===k)));
+  chips($('#f-mood'),'mood',Object.entries(MOODS));
+  chips($('#f-src'),'src',[...new Set(DATA.map(g=>g.src))].map(s=>[s,s]));
+  chips($('#f-proj'),'proj',[...new Set(DATA.map(g=>g.proj))].map(s=>[s,s]));
+  render();
+}).catch(()=>{$('#list').innerHTML='<div class="empty">Không tải được danh sách âm thanh. Tải lại trang để thử lần nữa.</div>'});
+$('#q').addEventListener('input',e=>{F.q=e.target.value.trim();render()});
+window.addEventListener('resize',()=>DATA.forEach(g=>g.vars.forEach(v=>drawWave(v,v===cur&&audio.duration?audio.currentTime/audio.duration:0))));
+</script>
+</body>
+</html>
